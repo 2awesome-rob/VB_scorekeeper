@@ -2,16 +2,10 @@
 
 A simple Streamlit app to record and score a game and generate player statistics. 
 
-### How to run it on your own machine
+### How to run it 
 
-1. Install the requirements
-
+In terminal
    ```
    $ pip install -r requirements.txt
-   ```
-
-2. Run the app
-
-   ```
-   $ streamlit run streamlit_app.py
+   $ streamlit run VolleyStatApp/volleyStat.py
    ```
