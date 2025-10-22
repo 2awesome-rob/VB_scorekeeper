@@ -7,7 +7,7 @@ Developed by Robert Patchin with assistance from
 
 from dataclasses import asdict, dataclass
 from datetime import date
-from typing import Optional
+from typing import Optional, TypedDict, List, cast
 from pathlib import Path
 
 import os
@@ -35,6 +35,15 @@ class Rally:
     sanctions: Optional[str] = None
     point: Optional[str] = None
 
+class Player(TypedDict):
+    name: str
+    jersey: int
+    position: str
+
+class Team(TypedDict):
+    name: str
+    season: str
+    players: List[Player]
 
 st.set_page_config(page_title="VStat",
                    layout="wide",
@@ -122,6 +131,8 @@ initialize_state()
 # --- Helper Utilities ---
 def get_team_names() -> list:
     """Return list of team names in session state."""
+    # help the type checker: ensure teams has the expected shape
+    st.session_state.teams = cast(List[Team], st.session_state.get("teams", []))
     return [t["name"] for t in st.session_state.teams]
 
 def find_team(name: str):
@@ -275,12 +286,13 @@ with tabs[1]:
             options=[""] + [t["name"] for t in st.session_state.teams],
         )
         opponent = st.text_input("Opponent")
-        match_date = st.date_input("Date", value=date.today())
+        #match_date = st.date_input("Date", value=date.today())
+        match_date = cast(date, st.date_input("Date", value=date.today()))
         set_format = st.selectbox(
             "Set Format", ["Best of 5", "Best of 3", "Always Play 3"]
         )
-        points_to_win = st.selectbox("Points to Win", [25, 15])
-        last_set_points = st.selectbox("Final Set Points", [25, 15])
+        points_to_win = cast(int, st.selectbox("Points to Win", [25, 15]))
+        last_set_points = cast(int, st.selectbox("Final Set Points", [25, 15]))
         submit = st.form_submit_button("Add Match")
         if submit and our_team and opponent:
             match_dict = {
@@ -320,6 +332,12 @@ with tabs[1]:
                     else:
                         jersey = i
                     st.session_state.lineup[f"position_{i}"] = jersey
+            st.experimental_rerun()
+        if cols[2].button("Archive", key=f"archive_{m_idx}"):
+            st.session_state.archived_matches.append(match)
+            st.session_state.matches.pop(m_idx)
+            save_matches_to_disk()
+            st.success("Match archived")
             st.experimental_rerun()
 
 # -----------------------------------------------------------------------------
@@ -473,12 +491,18 @@ with tabs[2]:
         with right:
             st.markdown("### Rotation & Subs")
             for i in range(1, 7):
-                st.session_state.lineup[f"position_{i}"] = st.number_input(
+                key = f"position_{i}"
+                cur = st.session_state.lineup.get(key, i)
+                if cur is None:
+                    cur = i
+                new_val = st.number_input(
                     f"Pos {i}",
-                    value=int(st.session_state.lineup.get(f"position_{i}", i)),
+                    value=int(cur),
                     min_value=1,
                     key=f"pos{i}",
                 )
+                st.session_state.lineup[key] = int(new_val)
+
             st.markdown("---")
             st.markdown("### Live Event Log")
             st.dataframe(st.session_state.df.tail(10),

@@ -1,0 +1,14 @@
+{
+    // Use basic type checking to reduce false positives from Streamlit dynamic patterns
+    "python.analysis.typeCheckingMode": "basic",
+
+    // Avoid noise from missing imports when using workspace-local modules
+    "python.analysis.reportMissingImports": false,
+
+    // Help the analyzer find the application package
+    "python.analysis.extraPaths": ["./VolleyStatApp"],
+
+    // Editor preferences (optional)
+    "editor.formatOnSave": true,
+    "python.formatting.provider": "black"
+}
