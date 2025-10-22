@@ -8,17 +8,13 @@ Developed by Robert Patchin with assistance from
 from dataclasses import asdict, dataclass
 from datetime import date
 from typing import Optional
-from pathlib import Path
 
-import os
-import json
 import pandas as pd
 import streamlit as st
 
 
 @dataclass
-class Rally:
-    """Data class representing a single rally sequence."""
+class RallyRow:
     position_1: int
     position_2: int
     position_3: int
@@ -42,46 +38,19 @@ st.set_page_config(page_title="VStat",
 st.title("🏐 VolleyStat")
 
 tabs = st.tabs([
-    "Team Setup",
-    "Schedule",
-    "Live Track",
-    "Archive"
+    "Team Management",
+    "Game Scheduling",
+    "Live Tracking",
+    "Archive & Export",
 ])
 
 
-# -----------------------------------------------------------------------------
-# Session State Initialization
-# -----------------------------------------------------------------------------
-#DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", 
-#                               Path.home() / ".local" / "share")) / "volley_stat"
-#TEAMS_FILE = DATA_DIR / "teams.json"
-DATA_DIR = Path.cwd() / ".vstat_data"
-TEAMS_FILE = DATA_DIR / "teams.json"
-SCHEDULE_FILE = DATA_DIR / "schedule.json"
-
-def _ensure_data_dir() -> None:
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-
-def initialize_state() -> None:
-    """Initialize session state variables."""
+def ensure_state() -> None:
+    """Ensure all necessary session state variables are initialized."""
     if "teams" not in st.session_state:
-        try:
-            if TEAMS_FILE.exists():
-                with TEAMS_FILE.open("r", encoding="utf-8") as f:
-                    st.session_state.teams = json.load(f)
-            else:
-                st.session_state.teams = []
-        except Exception:
-            st.session_state.teams = []
+        st.session_state.teams = []
     if "matches" not in st.session_state:
-        try:
-            if SCHEDULE_FILE.exists():
-                with SCHEDULE_FILE.open("r", encoding="utf-8") as f:
-                    st.session_state.matches = json.load(f)
-            else:
-                st.session_state.matches = []
-        except Exception:
-            st.session_state.matches = []
+        st.session_state.matches = []
     if "archived_matches" not in st.session_state:
         st.session_state.archived_matches = []
     if "current_match" not in st.session_state:
@@ -113,90 +82,45 @@ def initialize_state() -> None:
         st.session_state.df = pd.DataFrame(columns=cols)
 
 
-initialize_state()
+ensure_state()
 
 # -----------------------------------------------------------------------------
 # Team Management
 # -----------------------------------------------------------------------------
-
-# --- Helper Utilities ---
-def get_team_names() -> list:
-    """Return list of team names in session state."""
-    return [t["name"] for t in st.session_state.teams]
-
-def find_team(name: str):
-    """Return team dict by name or None."""
-    return next((t for t in st.session_state.teams if t["name"] == name), None)
-
-def export_team(team: dict) -> bytes:
-    """Return team dict serialized as JSON bytes for download."""
-    return json.dumps(team, indent=2).encode("utf-8")
-
-def save_teams_to_disk() -> None:
-    """Save teams to disk as JSON file in user data dir."""
-    try:
-        _ensure_data_dir()
-        tmp = TEAMS_FILE.with_suffix(".tmp")
-        with tmp.open("w", encoding="utf-8") as f:
-            json.dump(st.session_state.teams, f, indent=2)
-        tmp.replace(TEAMS_FILE)
-    except Exception:
-        st.error("Failed to save teams to disk")
-        pass
-
-def import_team_file(uploaded) -> None:
-    """Import a team from uploaded JSON file-like object."""
-    try:
-        data = json.load(uploaded)
-        if isinstance(data, dict) and "name" in data and "players" in data:
-            if any(t["name"] == data["name"] for t in st.session_state.teams):
-                st.error("A team with that name already exists")
-            else:
-                st.session_state.teams.append(data)
-                save_teams_to_disk()
-                st.success("Team imported")
-                st.experimental_rerun()
-        else:
-            st.error("Invalid team file format")
-    except Exception as e:
-        st.error(f"Import failed: {e}")
-
-# --- Team Management Page ---
 with tabs[0]:
     st.header("Team Management")
+    left, right = st.columns([2, 1])
 
-    st.subheader("Teams & Rosters")
-    team_names = get_team_names()
-    for t_idx, team in enumerate(st.session_state.teams):
-        with st.expander(f"{team['name']} ({team.get('season','')})"):
-            st.write("Roster")
-            for p_idx, p in enumerate(team["players"]):
-                cols = st.columns([1, 3, 3, 1])
-                cols[0].write(f"#{p['jersey']}")
-                cols[1].write(p["name"])
-                cols[2].write(p["position"])
-                if cols[3].button("Remove",
-                                  key=f"remove_{t_idx}_{p_idx}"):
-                    team["players"].pop(p_idx)
-                    #save_teams_to_disk()
-                    st.experimental_rerun()
+    with left:
+        st.subheader("Create Team")
+        team_name = st.text_input("Team name")
+        season = st.text_input("Season")
+        if st.button("Create Team") and team_name:
+            st.session_state.teams.append(
+                {"name": team_name, "season": season, "players": []}
+            )
+            st.success("Team created")
 
-            st.markdown("Add player")
-            positions = ["Setter", "Outside",
-                         "Middle", "Right-Side",
-                         "Libero", "Defensive", "Utility"]
-            cols = st.columns([1, 3, 3, 1])
-            with cols[0]:
-                pjersey = st.number_input("Jersey",
-                                      min_value=1,
-                                      key=f"pjersey{t_idx}")
-            with cols[1]:
+        st.markdown("---")
+        st.subheader("Teams & Rosters")
+        for t_idx, team in enumerate(st.session_state.teams):
+            with st.expander(f"{team['name']} ({team.get('season','')})"):
+                st.write("Roster")
+                for p_idx, p in enumerate(team["players"]):
+                    cols = st.columns([1, 3, 1])
+                    cols[0].write(f"#{p['jersey']}")
+                    cols[1].write(p["name"])
+                    if cols[2].button("Remove",
+                                      key=f"remove_{t_idx}_{p_idx}"):
+                        team["players"].pop(p_idx)
+                        st.experimental_rerun()
+
+                st.markdown("Add player")
                 pname = st.text_input("Name", key=f"pname{t_idx}")
-            with cols[2]:
-                ppos = st.selectbox("Position",
-                                key=f"ppos{t_idx}",
-                                options=positions)
-            with cols[3]:
+                pjersey = st.number_input("Jersey",
+                                          min_value=1,
+                                          key=f"pjersey{t_idx}")
+                ppos = st.text_input("Position", key=f"ppos{t_idx}")
                 if st.button("Add Player", key=f"addplayer{t_idx}") and pname:
                     if any(x["jersey"] == pjersey for x in team["players"]):
                         st.error("Duplicate jersey")
@@ -209,64 +133,28 @@ with tabs[0]:
                             }
                         )
                         st.success("Player added")
-                        #save_teams_to_disk()
-                        st.experimental_rerun()
-    if team_names:
-        if st.button("Save Changes"):
-            for t_idx, team in enumerate(st.session_state.teams):
-                team["players"] = sorted(
-                    team["players"], key=lambda p: p["jersey"]
-                )
-            save_teams_to_disk()
-            st.success("Changes saved")
-    st.markdown("---")        
-    st.subheader("Create New Team")
-    team_name = st.text_input("Team name")
-    season = st.text_input("Season")
-    if st.button("Create Team") and team_name:
-        st.session_state.teams.append(
-            {"name": team_name, "season": season, "players": []}
+
+    with right:
+        st.subheader("Select Team")
+        team_names = [
+            t["name"]
+            for t in st.session_state.teams
+        ]
+        sel = st.selectbox(
+            "Team",
+            options=[""] + team_names,
         )
-        #save_teams_to_disk()
-        st.success("Team created")
-        st.experimental_rerun()
-
-    st.markdown("---")
-    st.subheader("Import / Export Team")
-    uploaded = st.file_uploader("Import team JSON", type=["json"])
-    if uploaded is not None:
-        import_team_file(uploaded)
-
-    if team_names:
-        sel = st.selectbox("Export team", options=[""] + team_names, key="export_team_select")
         if sel:
-            team_obj = find_team(sel)
-            if team_obj:
-                st.download_button(
-                    "Download Team JSON",
-                    data=export_team(team_obj),
-                    file_name=f"{sel.replace(' ','_')}_team.json",
-                    mime="application/json",
-                )
+            team = next(
+                t for t in st.session_state.teams if t["name"] == sel
+            )
+            st.write(
+                f"Players: {len(team['players'])}"
+            )
 
 # -----------------------------------------------------------------------------
 # Scheduling
 # -----------------------------------------------------------------------------
-
-# --- Helper Utilities ---
-def save_matches_to_disk() -> None:
-    """Save matches to disk as JSON file in user data dir."""
-    try:
-        _ensure_data_dir()
-        tmp = SCHEDULE_FILE.with_suffix(".tmp")
-        with tmp.open("w", encoding="utf-8") as f:
-            json.dump(st.session_state.matches, f, indent=2)
-        tmp.replace(SCHEDULE_FILE)
-    except Exception:
-        st.error("Failed to save schedule to disk")
-        pass
-
-# --- Scheduling Page ---
 with tabs[1]:
     st.header("Scheduling")
     with st.form("add_match"):
@@ -280,7 +168,6 @@ with tabs[1]:
             "Set Format", ["Best of 5", "Best of 3", "Always Play 3"]
         )
         points_to_win = st.selectbox("Points to Win", [25, 15])
-        last_set_points = st.selectbox("Final Set Points", [25, 15])
         submit = st.form_submit_button("Add Match")
         if submit and our_team and opponent:
             match_dict = {
@@ -289,10 +176,8 @@ with tabs[1]:
                 "date": match_date.isoformat(),
                 "set_format": set_format,
                 "points_to_win": int(points_to_win),
-                "last_set_points": int(last_set_points),
             }
             st.session_state.matches.append(match_dict)
-            save_matches_to_disk()
             st.success("Match scheduled")
 
     st.markdown("---")
@@ -325,8 +210,6 @@ with tabs[1]:
 # -----------------------------------------------------------------------------
 # Game Tracking
 # -----------------------------------------------------------------------------
-
-# --- Game Tracking Page ---
 with tabs[2]:
     st.header("Game Tracking")
     if not st.session_state.current_match:
@@ -377,7 +260,7 @@ with tabs[2]:
                 "Serve result", ["Ace", "Error", "Return"]
             )
             if st.button("Record Serve"):
-                row = Rally(
+                row = RallyRow(
                     **st.session_state.lineup,
                     rotation=st.session_state.rotation,
                     touch_serve=f"{server_jersey}:{serve_result}",
@@ -442,7 +325,7 @@ with tabs[2]:
                 )
 
             if st.button("Record Rally"):
-                row = Rally(
+                row = RallyRow(
                     **st.session_state.lineup,
                     rotation=st.session_state.rotation,
                 )
@@ -488,7 +371,6 @@ with tabs[2]:
 # Archive & Export
 # -----------------------------------------------------------------------------
 
-# --- Archive & Export Page ---
 with tabs[3]:
     st.header("Archive & Export")
     st.subheader("Completed Matches")

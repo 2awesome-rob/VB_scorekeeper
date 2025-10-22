@@ -12,16 +12,27 @@ for i in range(1, 7):
         f"Jersey # at Position {i}", min_value=1, value=i
     )
 
-START_ROTATION = st.sidebar.slider("Rotation", min_value=1, max_value=6, value=1)
+START_ROTATION = st.sidebar.slider(
+    "Rotation",
+    min_value=1,
+    max_value=6,
+    value=1
+)
 st.sidebar.header("Initialize Set")
 GAME_ID = st.sidebar.text_input(
-    "Game ID", value="", max_chars=16, placeholder="KLA-YY-MM-DD-1"
+    "Game ID",
+    value="",
+    max_chars=16,
+    placeholder="OPVBC-YY-MM-DD-1",
 )
 SET_NUMBER = str(
-    st.sidebar.number_input("Set", min_value=1, max_value=5, value=1)
+    st.sidebar.number_input(
+        "Set", min_value=1, max_value=5, value=1
+    )
 )
 GAME_SET = f"{GAME_ID}-{SET_NUMBER}"
-FIRST_SERVE = st.sidebar.selectbox("Who is serving?", options=["us", "them"])
+FIRST_SERVE = st.sidebar.selectbox(
+    "Who is serving?", options=["us", "them"])
 PLAY_TO = st.sidebar.number_input("Game to", min_value=15, value=25)
 
 
@@ -48,7 +59,12 @@ def reset_session_state():
 
     index = pd.MultiIndex.from_tuples(
         [(GAME_SET, 0, 0, rally_step)],
-        names=["game", "score_us", "score_them", "rally_step"],
+        names=[
+            "game",
+            "score_us",
+            "score_them",
+            "rally_step",
+        ],
     )
 
     data = {
@@ -78,7 +94,12 @@ def add_new_row():
                 st.session_state.rally_step,
             )
         ],
-        names=["game", "score_us", "score_them", "rally_step"],
+        names=[
+            "game",
+            "score_us",
+            "score_them",
+            "rally_step",
+        ],
     )
 
     data = {
@@ -107,7 +128,8 @@ def point_us():
 
     if (
         st.session_state.score_us >= PLAY_TO
-        and st.session_state.score_us >= st.session_state.score_them + 2
+        and st.session_state.score_us
+        >= st.session_state.score_them + 2
     ):
         st.session_state.game_over = True
         st.success("We Win!")
@@ -120,7 +142,8 @@ def point_them():
 
     if (
         st.session_state.score_them >= PLAY_TO
-        and st.session_state.score_them >= st.session_state.score_us + 2
+        and st.session_state.score_them
+        >= st.session_state.score_us + 2
     ):
         st.session_state.game_over = True
         st.error("Game Over Man")
@@ -160,7 +183,9 @@ def handle_serve():
 
     with st.form(key=f"serve_form_{st.session_state.radio_counter}"):
         serve_result = st.radio(
-            "Result of the serve:", options=["Ace", "Error", "Return"], index=None
+            "Result of the serve:",
+            options=["Ace", "Error", "Return"],
+            index=None
         )
 
         submitted = st.form_submit_button(f"✅ Confirm {serve_result}")
@@ -189,11 +214,14 @@ def rally():
     row_idx = len(st.session_state.df) - 1
 
     block_options = [
-        st.session_state.df.iloc[row_idx][f"position_{pos(st.session_state.rotation + j)}"]
+        st.session_state.df.iloc[row_idx][
+            f"position_{pos(st.session_state.rotation + j)}"
+        ]
         for j in [3, 2, 1]
     ]
 
-    touch_options = [st.session_state.df.iloc[row_idx][f"position_{i}"] for i in range(1, 7)]
+    touch_options = [st.session_state.df.iloc[row_idx][f"position_{i}"] for
+                     i in range(1, 7)]
 
     with st.form(key=f"rally_form_{st.session_state.radio_counter}"):
         if st.session_state.rally_step == 1:
@@ -209,10 +237,16 @@ def rally():
 
         with col1:
             st.markdown("### Block")
-            blocker = st.selectbox("Blocker", options=block_options, index=None)
+            blocker = st.selectbox("Blocker",
+                                   options=block_options,
+                                   index=None)
             block_result = st.radio(
                 "Block Result",
-                options=["Block", "Block:Kill", "Block:Tip", "Block:Assist", "NoBlock"],
+                options=["Block",
+                         "Block:Kill",
+                         "Block:Tip",
+                         "Block:Assist",
+                         "NoBlock"],
                 index=4,
             )
 
@@ -353,7 +387,8 @@ if "df" not in st.session_state:
 if st.sidebar.button("🔄 Reset Match"):
     reset_session_state()
 
-st.title(f"🏐 {GAME_SET} | Us: {st.session_state.score_us}    Them: {st.session_state.score_them}")
+st.title(f"🏐 {GAME_SET} | Us: {st.session_state.score_us}" +
+         f" Them: {st.session_state.score_them}")
 st.dataframe(st.session_state.df.tail(5), use_container_width=True)
 st.download_button(
     "📥 Export Match Data",

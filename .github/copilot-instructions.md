@@ -2,7 +2,7 @@
 
   ## Project Overview
   This is a web application for tracking volleyball player statistics in real-time.
-  To support this, it must minimize user input requirements while maximizing data accuracy and completeness. The app must be game aware, understanding volleyball rules and player rotations to support prompting the user for necessary inputs only. The game log files must be structured and exportable to support post-game analysis. The app will be run on tablets or phones during games and screen layout must be optimized for quick access and minimal navigation.
+  To support this, it must minimize user input requirements while maximizing data accuracy and completeness. The app must be game aware, understanding volleyball rules and player rotations to support prompting the user for necessary inputs only. The game log files must be structured and exportable to support post-game analysis. The app will be run on tablets or phones during games and screen layout must be optimized for quick access and minimal navigation and intuitive game flow.
 
   ## Core Architecture
   -- **User Interface**: Use Streamlit or ReactPy for the web interface and organize the app into four primary tabs (mobile/tablet-first layout). The tabs should map to the app workflows and provide single-tap access to common actions. See `/.archive/vb.swift` for a reference layout and interaction patterns.
@@ -19,7 +19,7 @@
      3. Game Tracking (live match)
        - Split into compact sub-sections for quick access: Scoreboard & Controls, Serve Entry, Rally Entry, Rotation/Subs, Live Event Log.
        - Scoreboard & Controls: big, high-contrast score numbers, large Point Us / Point Them buttons, current rotation indicator, and a single "Next Rally" action.
-       - Serve Entry: pick server (position/jersey), select serve result (Ace / Error / Return) with one-tap buttons.
+       - Serve Entry: recognize server (position/jersey) from game state, select serve result (Ace / Error / Return) with one-tap buttons.
        - Rally Entry: streamlined 1-2-3 touch input with quick pickers for player and result; block handling with quick blocker selection and block result options.
        - Rotation & Substitutions: compact rotational diagram and one-tap substitutions; auto-apply rotation on side-out when appropriate.
        - Live Event Log: append each rally as a structured row; allow quick undo and edit of last event.
